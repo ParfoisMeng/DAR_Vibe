@@ -1,0 +1,13 @@
+{
+  "name": "dar-vibe-phase0",
+  "version": "0.0.1",
+  "description": "问道无界 Phase 0 原型",
+  "scripts": {
+    "dev": "npx esbuild src/main.ts --bundle --outfile=dist/bundle.js --watch --sourcemap",
+    "build": "npx esbuild src/main.ts --bundle --outfile=dist/bundle.js --minify",
+    "serve": "npx http-server . -p 3000 -o"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
