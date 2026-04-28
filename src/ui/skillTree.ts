@@ -2,6 +2,7 @@
 // 职责：渲染右侧的功法树节点列表和协同感应列表
 
 import { SkillNode, Synergy, SynergyTier } from '../types';
+import { SYNERGIES_PHASE0 } from '../data/synergies';
 
 /** 渲染右侧已习得功法列表 */
 export function renderSkillTree(nodes: SkillNode[]): void {
@@ -52,17 +53,17 @@ export function showSynergyToast(synergy: Synergy): void {
   setTimeout(() => el.classList.remove('show'), 3000);
 }
 
-/** 渲染天机图鉴 */
-export function renderJournal(discovered: Synergy[]): void {
+/** 渲染天机图鉴（显示所有协同槽位，未发现的显示「???」） */
+export function renderJournal(discoveredIds: string[]): void {
   const el = document.getElementById('journal-display');
   if (!el) return;
 
-  if (discovered.length === 0) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--text2)">图鉴空白</div>';
-    return;
-  }
-
-  el.innerHTML = discovered.map(s =>
-    `<div style="font-size:11px;color:var(--text2);margin-bottom:3px">· ${s.name}</div>`
-  ).join('');
+  el.innerHTML = SYNERGIES_PHASE0.map(s => {
+    const found = discoveredIds.includes(s.id);
+    if (found) {
+      return `<div style="font-size:11px;color:var(--text2);margin-bottom:3px">· ${s.name}</div>`;
+    } else {
+      return `<div style="font-size:11px;color:#444;margin-bottom:3px">· ???</div>`;
+    }
+  }).join('') + `<div style="font-size:10px;color:#555;margin-top:4px">已发现 ${discoveredIds.length}/${SYNERGIES_PHASE0.length}</div>`;
 }

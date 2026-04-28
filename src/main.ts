@@ -71,11 +71,8 @@ function updateUI() {
   StatsPanel.renderEquipSlot('eq-ring', s.equippedItems['ring'] ?? null);
   SkillTreeUI.renderSkillTree(s.skillTree);
   SkillTreeUI.renderSynergies(s.activeSynergies);
-  // 天机图鉴：从全局协同数据库查找（不依赖当前状态是否已再次触发）
-  const journalSynergies = meta.discoveredSynergies
-    .map(id => SYNERGIES_PHASE0.find(sy => sy.id === id))
-    .filter((x): x is typeof SYNERGIES_PHASE0[0] => x !== undefined);
-  SkillTreeUI.renderJournal(journalSynergies);
+  // 天机图鉴：传入已发现的协同 ID 列表，renderJournal 内部从全局数据构建
+  SkillTreeUI.renderJournal(meta.discoveredSynergies);
 }
 
 // ─── 战斗步骤 ────────────────────────────────────────────────────
@@ -224,13 +221,50 @@ function applyHMEffect(opt: HeavenlyMomentOption) {
     case 'hm_75Burst': s.atk = Math.round(s.atk * (1 + opt.effectValue)); break;
     case 'hm_75Dodge': s.dodge += opt.effectValue; break;
     case 'hm_50AcceptDebuff': s.atk = Math.round(s.atk * (1 + opt.effectValue)); break;
-    case 'hm_25Mutual': s.atk = Math.round(s.atk * 2); s.hp = Math.max(1, Math.round(s.hp * 0.5)); break;
-    case 'hm_25Shield': s.shield += 300; break;
+    case 'hm_50BodySwitch': s.dmgReduce = Math.min(0.8, s.dmgReduce + 0.2); break;  // 无视削弱，护盾转化
+    case 'hm_50Talisman': /* 封印符：抵消阶段变化，无额外效果 */ break;
+    case 'hm_25MutualStrike': s.atk = Math.round(s.atk * 2); s.hp = Math.max(1, Math.round(s.hp * 0.75)); break;
+    case 'hm_25ShieldTank': s.shield += 300; s.dmgReduce = Math.min(0.8, s.dmgReduce + 0.1); break;
   }
   state = { ...state, stats: s };
 }
 
 // ─── Boss 战 ─────────────────────────────────────────────────────
+
+/** Boss 分段战斗（无准备界面，直接结算，不触发装备掉落） */
+async function doBossCombatSegment(segEnemy: Enemy, phaseLabel: string): Promise<void> {
+  CombatLog.appendLog({ type: 'boss', text: `━━━ ${phaseLabel} ━━━`, timestamp: 0 });
+  lockActions();
+
+  const result = calcCombat(state.stats, segEnemy);
+  await CombatLog.playLogs(result.logs);
+
+  // 更新状态（Boss 段扣血）
+  state = {
+    ...state,
+    combatCount: state.combatCount + 1,
+    stats: {
+      ...state.stats,
+      hp: Math.max(0, result.playerHpRemain),
+      shield: result.playerShieldRemain,
+      swordIntent: Math.min(100, (state.stats.swordIntent ?? 0) + result.swordIntentGain),
+    },
+    daoYun: state.daoYun + 5,
+  };
+
+  const durationS = (result.durationMs / 1000).toFixed(1);
+  if (result.victory) {
+    CombatLog.appendLog({ type: 'boss', text: `苍狼王受挫，耗时 ${durationS}s`, timestamp: 0 });
+  } else {
+    CombatLog.appendLog({ type: 'system', text: `✗ 败于苍狼王（${phaseLabel}），耗时 ${durationS}s`, timestamp: 0 });
+    await showRunEnd(false, `苍狼王·${phaseLabel}`, `战斗时长${durationS}s，根基耗尽`);
+    runAborted = true;
+    return;
+  }
+
+  saveRunSnapshot(state);
+  updateUI();
+}
 
 async function doBoss(): Promise<void> {
   state = { ...state, currentZone: 2 };
@@ -243,9 +277,88 @@ async function doBoss(): Promise<void> {
 
   // 开场天机时刻（必触发）
   await doHeavenlyMoment('hm_cang_lang_opening');
+  if (runAborted) return;
 
-  // Boss 战（Phase 0：简化为单次完整计算）
-  await doCombat(BOSS_CANG_LANG);
+  const segHp = Math.round(BOSS_CANG_LANG.hp / 4); // 每段 8750 HP
+
+  // ── 阶段一：100%→75% ─────────────────────────────────────
+  await doBossCombatSegment(
+    { ...BOSS_CANG_LANG, hp: segHp },
+    '苍狼王 · 阶段一（100%→75%）'
+  );
+  if (runAborted) return;
+
+  await doHeavenlyMoment('hm_cang_lang_75');
+  if (runAborted) return;
+
+  // ── 阶段二：75%→50% ─────────────────────────────────────
+  await doBossCombatSegment(
+    { ...BOSS_CANG_LANG, hp: segHp },
+    '苍狼王 · 阶段二（75%→50%）'
+  );
+  if (runAborted) return;
+
+  CombatLog.appendLog({ type: 'boss', text: '⚡ 苍狼王发出滔天狼啸，魔化之力涌现——进入化神之怒状态！', timestamp: 0 });
+  await doHeavenlyMoment('hm_cang_lang_50');
+  if (runAborted) return;
+
+  // ── 阶段三：50%→25%（化神之怒，攻击力+30%，减伤+7%）───────
+  await doBossCombatSegment(
+    { ...BOSS_CANG_LANG, hp: segHp, atk: Math.round(BOSS_CANG_LANG.atk * 1.3), dmgReduce: 0.22 },
+    '苍狼王 · 化神之怒（50%→25%）'
+  );
+  if (runAborted) return;
+
+  CombatLog.appendLog({ type: 'boss', text: '🐺 苍狼王已至强弩之末，却迸发出殊死之志！', timestamp: 0 });
+  await doHeavenlyMoment('hm_cang_lang_25');
+  if (runAborted) return;
+
+  // ── 阶段四：25%→0%（垂死反扑，攻击力×1.5，减伤降至 5%）────
+  await doBossCombatSegment(
+    { ...BOSS_CANG_LANG, hp: segHp, atk: Math.round(BOSS_CANG_LANG.atk * 1.5), dmgReduce: 0.05 },
+    '苍狼王 · 垂死反扑（25%→0%）'
+  );
+  if (runAborted) return;
+
+  // Boss 最终死亡
+  CombatLog.appendLog({ type: 'boss', text: '苍狼王轰然倒地，魔气四散——此地从此清明。', timestamp: 0 });
+  state = { ...state, daoYun: state.daoYun + 20 };
+  const loot = rollEquipment('weapon', state.stats.luckDrop);
+  if (loot) await doLootDecision(loot);
+}
+
+// ─── 道途分叉 ────────────────────────────────────────────────────
+
+/** Zone1 精英战后的道途二选一 */
+async function doZoneFork(): Promise<void> {
+  return new Promise(resolve => {
+    CombatLog.appendLog({ type: 'system', text: '━━━ 道途分叉 · 幽冥古道入口 ━━━', timestamp: 0 });
+    setAction(
+      '道途分叉：前方二路',
+      '北荒精英已伏，前方道路一分为二。\n气机指引你二择其一——道途将决定后续机缘。',
+      [
+        {
+          label: '⚔ 血战古道（高风险）',
+          primary: true,
+          onClick: () => {
+            CombatLog.appendLog({ type: 'system', text: '踏入血战古道——战意滔天，根基淬炼更深，但敌患更烈。', timestamp: 0 });
+            state = { ...state, stats: { ...state.stats, atk: Math.round(state.stats.atk * 1.08) }, daoYun: state.daoYun + 3 };
+            updateUI();
+            resolve();
+          },
+        },
+        {
+          label: '🌿 幽谷秘境（稳健）',
+          onClick: () => {
+            CombatLog.appendLog({ type: 'system', text: '踏入幽谷秘境——灵气充沛，根基壮实，境界机缘更丰。', timestamp: 0 });
+            state = { ...state, stats: { ...state.stats, maxHp: state.stats.maxHp + 200, hp: Math.min(state.stats.hp + 200, state.stats.maxHp + 200) }, daoYun: state.daoYun + 3 };
+            updateUI();
+            resolve();
+          },
+        },
+      ]
+    );
+  });
 }
 
 // ─── Run 结算 ─────────────────────────────────────────────────────
@@ -303,6 +416,8 @@ async function runFlow() {
   await doSkillPick('第一次境界突破');
   await doCombat(ZONE1_ENEMIES[3]);  // 精英
   if (runAborted) return;
+  await doSkillPick('第二次境界突破');  // 精英战后多一次境界突破
+  await doZoneFork();                // 道途分叉
 
   // ── Zone 2：幽冥古道 ──────────────────────────────────────
   state = { ...state, currentZone: 1 };
@@ -315,12 +430,13 @@ async function runFlow() {
   await doEvent();                    // 事件
   await doCombat(ZONE2_ENEMIES[1]);  // 普通5
   if (runAborted) return;
-  await doSkillPick('第二次境界突破');
+  await doSkillPick('第三次境界突破');
   await doCombat(ZONE2_ENEMIES[2]);  // 普通6
   if (runAborted) return;
+  await doSkillPick('第四次境界突破');  // 普通6后多一次境界突破
   await doCombat(ZONE2_ENEMIES[3]);  // 精英
   if (runAborted) return;
-  await doSkillPick('第三次境界突破');
+  await doSkillPick('第五次境界突破');  // Zone2 精英后境界突破
 
   // ── Boss 战 ───────────────────────────────────────────────
   await doBoss();
