@@ -129,8 +129,8 @@ export function calcCombat(
     swordIntentGain += siGain;
     const newSI = Math.min(100, playerStats.swordIntent + swordIntentGain);
 
-    // 每5层剑意增长输出一次状态日志
-    if (Math.floor((newSI) / 5) > Math.floor((newSI - siGain) / 5)) {
+    // 每20层剑意增长输出一次状态日志（减少日志密度）
+    if (Math.floor((newSI) / 20) > Math.floor((newSI - siGain) / 20)) {
       log(fill(SWORD_INTENT_GAIN, { si: newSI }), 'normal');
     }
 
@@ -173,28 +173,5 @@ export function calcCombat(
   };
 }
 
-// ── 简易 DPS 测试（控制台验证）─────────────────────────────
-
-export function validateCombatEngine(): void {
-  const { defaultStats } = require('../types') as typeof import('../types');
-  const p = defaultStats();
-  const normalEnemy: Enemy = {
-    id: 'test_normal',
-    name: '荒野煞魂',
-    tier: 'normal',
-    hp: 4500,
-    atk: 80,
-    atkSpeed: 0.8,
-    dmgReduce: 0,
-  };
-
-  const result = calcCombat(p, normalEnemy);
-  const durationS = result.durationMs / 1000;
-  console.log(`[引擎验证] 筑基期 vs 普通怪: ${result.victory ? '胜利' : '失败'}, 耗时 ${durationS.toFixed(1)}秒`);
-  console.log(`[引擎验证] 玩家DPS: ${calcPlayerDPS(p).toFixed(0)}, 目标范围: 击杀 6~15秒`);
-  if (durationS >= 6 && durationS <= 15) {
-    console.log('[引擎验证] ✅ 数值在目标范围内');
-  } else {
-    console.warn(`[引擎验证] ⚠️ 数值偏差，耗时 ${durationS.toFixed(1)}秒 (目标6~15秒)`);
-  }
-}
+// ── 战斗引擎模块导出仅 calcCombat，validateCombatEngine 已删除
+// 数值验证通过 Node.js 脚本离线执行（见 package.json test 命令）

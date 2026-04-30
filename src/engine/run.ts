@@ -6,7 +6,7 @@ import type {
   RunState, Stats, SkillNode, Synergy, Equipment,
   EquipSlot, SpiritRoot,
 } from '../types';
-import { defaultStats, defaultMeta } from '../types';
+import { defaultStats } from '../types';
 import { detectSynergies, collectSkillTags, findNewSynergies } from '../data/synergies';
 import { collectAffixTags } from '../data/affixes';
 
@@ -218,9 +218,9 @@ export function equipItem(state: RunState, equip: Equipment): RunState {
   const allTags = [...new Set([...skillTags, ...affixTags])];
   const newSynergies = detectSynergies(allTags);
 
-  // 将旧装备（如果有）放入仓库/待处理
+  // 将旧装备（如果有）放回背包，供后续处理（存仓库或分解）
   const newInventory = oldEquip
-    ? [...state.inventory.filter(i => i.instanceId !== oldEquip.instanceId)]
+    ? [...state.inventory, oldEquip]
     : state.inventory;
 
   return {
@@ -239,45 +239,5 @@ export function discardItem(state: RunState, instanceId: string): RunState {
   };
 }
 
-// ── 战斗后更新状态 ────────────────────────────────────────────
-
-export function applyPostCombat(
-  state: RunState,
-  swordIntentGain: number,
-  playerHpRemain: number,
-  playerShieldRemain: number,
-  loot?: Equipment,
-): RunState {
-  const newSI = Math.min(100, state.stats.swordIntent + swordIntentGain);
-  const newStats = {
-    ...state.stats,
-    swordIntent: newSI,
-    hp: playerHpRemain,
-    shield: playerShieldRemain,
-  };
-
-  const newInventory = loot ? [...state.inventory, loot] : state.inventory;
-
-  return {
-    ...state,
-    stats: newStats,
-    inventory: newInventory,
-    combatCount: state.combatCount + 1,
-    daoYun: state.daoYun + (state.combatCount > 0 ? 10 : 5),
-  };
-}
-
-// ── 天机时刻决策记录 ─────────────────────────────────────────
-
-export function recordHeavenlyMoment(
-  state: RunState,
-  momentId: string,
-  chosenOption: string,
-  conditionMet: boolean,
-): RunState {
-  const record = `${momentId}|${chosenOption}|${conditionMet ? 'met' : 'unmet'}`;
-  return {
-    ...state,
-    heavenlyMomentHistory: [...state.heavenlyMomentHistory, record],
-  };
-}
+// applyPostCombat / recordHeavenlyMoment / discardItem 已移除
+// main.ts 在调用点内联处理这些逻辑，保持单一来源

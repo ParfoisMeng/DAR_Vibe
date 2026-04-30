@@ -104,11 +104,7 @@ export const BOSS_HEAVENLY_MOMENTS: HeavenlyMoment[] = [
       {
         label: '使用「封印符」',
         description: '消耗1枚封印符，抵消本次阶段变化效果',
-        condition: {
-          key: 'hasSkillTag',
-          tag: 'seal_talisman', // 需要商铺购买的封印符
-          displayText: '需持有封印符×1（商铺购买）',
-        },
+        // Phase 0 中封印符尚未实装，选项始终可用但有提示（Phase 1 接入商铺后添加条件）
         effectKey: 'hm_50Talisman',
         effectValue: 0,
         resultText: '你取出封印符，符文燃起金光，将「魔化狂怒」的气机完全封印——苍狼王怒目而视。',

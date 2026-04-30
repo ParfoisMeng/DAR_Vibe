@@ -214,17 +214,30 @@ async function doHeavenlyMoment(hmId: string): Promise<void> {
 function applyHMEffect(opt: HeavenlyMomentOption) {
   const s = { ...state.stats };
   switch (opt.effectKey) {
-    case 'hm_openingAggressive': s.atk = Math.round(s.atk * (1 + opt.effectValue)); break;
-    case 'hm_openingCounterstrike': s.dodge += opt.effectValue; break;
-    case 'hm_openingDefend': s.shield += opt.effectValue; break;
-    case 'hm_75Defend': s.dmgReduce = Math.min(0.8, s.dmgReduce + 0.4); break;
-    case 'hm_75Burst': s.atk = Math.round(s.atk * (1 + opt.effectValue)); break;
-    case 'hm_75Dodge': s.dodge += opt.effectValue; break;
-    case 'hm_50AcceptDebuff': s.atk = Math.round(s.atk * (1 + opt.effectValue)); break;
-    case 'hm_50BodySwitch': s.dmgReduce = Math.min(0.8, s.dmgReduce + 0.2); break;  // 无视削弱，护盾转化
-    case 'hm_50Talisman': /* 封印符：抵消阶段变化，无额外效果 */ break;
-    case 'hm_25MutualStrike': s.atk = Math.round(s.atk * 2); s.hp = Math.max(1, Math.round(s.hp * 0.75)); break;
-    case 'hm_25ShieldTank': s.shield += 300; s.dmgReduce = Math.min(0.8, s.dmgReduce + 0.1); break;
+    case 'hm_openingAggressive':
+      s.atk = Math.round(s.atk * (1 + opt.effectValue)); // +25% atk
+      s.shield = Math.round(s.shield * 0.5);             // 护盾减半（按数据注释）
+      break;
+    case 'hm_openingCounterstrike': s.dodge += opt.effectValue; break;   // +15% 闪避
+    case 'hm_openingDefend':        s.shield += opt.effectValue; break;  // +80 护盾
+    case 'hm_75Defend':
+      // effectValue=0.8：最终伤害减至20%，即 dmgReduce 提升到 1-0.2=0.8 上限
+      s.dmgReduce = Math.min(0.8, s.dmgReduce + opt.effectValue * 0.5);
+      break;
+    case 'hm_75Burst':  s.atk = Math.round(s.atk * (1 + opt.effectValue)); break; // +effectValue atk
+    case 'hm_75Dodge':  s.dodge += opt.effectValue; break;
+    case 'hm_50AcceptDebuff': s.atk = Math.round(s.atk * (1 + opt.effectValue)); break; // +30% 补偿
+    case 'hm_50BodySwitch':   s.dmgReduce = Math.min(0.8, s.dmgReduce + opt.effectValue * 0.4); break;
+    case 'hm_50Talisman': /* 封印符：抵消阶段变化，无数值效果 */ break;
+    case 'hm_25MutualStrike':
+      // 对 Boss 造成 effectValue(600%)攻击伤害体现为本段玩家 atk 大幅提升
+      s.atk = Math.round(s.atk * opt.effectValue);       // atk ×6 for final segment
+      s.hp  = Math.max(1, Math.round(s.hp * 0.75));      // 自身损失 25% 当前 HP
+      break;
+    case 'hm_25ShieldTank':
+      s.shield    += opt.effectValue;                     // +100 护盾（数据值）
+      s.dmgReduce  = Math.min(0.8, s.dmgReduce + 0.1);   // Boss 攻击力-30% 等效
+      break;
   }
   state = { ...state, stats: s };
 }
@@ -340,19 +353,22 @@ async function doZoneFork(): Promise<void> {
         {
           label: '⚔ 血战古道（高风险）',
           primary: true,
-          onClick: () => {
+          onClick: async () => {
             CombatLog.appendLog({ type: 'system', text: '踏入血战古道——战意滔天，根基淬炼更深，但敌患更烈。', timestamp: 0 });
             state = { ...state, stats: { ...state.stats, atk: Math.round(state.stats.atk * 1.08) }, daoYun: state.daoYun + 3 };
             updateUI();
+            await waitContinue('深入古道 →');
             resolve();
           },
         },
         {
           label: '🌿 幽谷秘境（稳健）',
-          onClick: () => {
+          onClick: async () => {
             CombatLog.appendLog({ type: 'system', text: '踏入幽谷秘境——灵气充沛，根基壮实，境界机缘更丰。', timestamp: 0 });
-            state = { ...state, stats: { ...state.stats, maxHp: state.stats.maxHp + 200, hp: Math.min(state.stats.hp + 200, state.stats.maxHp + 200) }, daoYun: state.daoYun + 3 };
+            const newMaxHp = state.stats.maxHp + 200;
+            state = { ...state, stats: { ...state.stats, maxHp: newMaxHp, hp: Math.min(state.stats.hp + 200, newMaxHp) }, daoYun: state.daoYun + 3 };
             updateUI();
+            await waitContinue('深入秘境 →');
             resolve();
           },
         },
