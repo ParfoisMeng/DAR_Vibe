@@ -1,0 +1,79 @@
+{
+  "timestamp": "2026-04-30T07:27:12.193Z",
+  "completedRuns": 10,
+  "synergyRunCount": 10,
+  "avgDurationMin": 0.6,
+  "avgSynergyPerRun": 2.1,
+  "details": [
+    {
+      "run": 1,
+      "durationMs": 35881,
+      "synergyCount": 2,
+      "completed": true,
+      "durationMin": 0.6
+    },
+    {
+      "run": 2,
+      "durationMs": 39939,
+      "synergyCount": 3,
+      "completed": true,
+      "durationMin": 0.7
+    },
+    {
+      "run": 3,
+      "durationMs": 35957,
+      "synergyCount": 3,
+      "completed": true,
+      "durationMin": 0.6
+    },
+    {
+      "run": 4,
+      "durationMs": 38126,
+      "synergyCount": 1,
+      "completed": true,
+      "durationMin": 0.6
+    },
+    {
+      "run": 5,
+      "durationMs": 39333,
+      "synergyCount": 3,
+      "completed": true,
+      "durationMin": 0.7
+    },
+    {
+      "run": 6,
+      "durationMs": 39451,
+      "synergyCount": 1,
+      "completed": true,
+      "durationMin": 0.7
+    },
+    {
+      "run": 7,
+      "durationMs": 39199,
+      "synergyCount": 3,
+      "completed": true,
+      "durationMin": 0.7
+    },
+    {
+      "run": 8,
+      "durationMs": 35117,
+      "synergyCount": 1,
+      "completed": true,
+      "durationMin": 0.6
+    },
+    {
+      "run": 9,
+      "durationMs": 35235,
+      "synergyCount": 2,
+      "completed": true,
+      "durationMin": 0.6
+    },
+    {
+      "run": 10,
+      "durationMs": 37658,
+      "synergyCount": 2,
+      "completed": true,
+      "durationMin": 0.6
+    }
+  ]
+}
