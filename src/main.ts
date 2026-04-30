@@ -17,12 +17,13 @@ import { BOSS_HEAVENLY_MOMENTS } from './data/heavenlyMoments';
 import { getFirstEvent, getRandomEvent } from './data/events';
 import { SYNERGIES_PHASE0 } from './data/synergies';
 import { rollEquipment } from './data/affixes';
-import { loadMeta, saveMeta, saveRunSnapshot, finalizeRun, exportSaveCode } from './save';
+import { loadMeta, saveMeta, saveRunSnapshot, loadRunSnapshot, finalizeRun, exportSaveCode, clearAllData, importSaveCode } from './save';
 
 import type {
   RunState, SpiritRoot, Equipment, EquipSlot,
   Enemy, HeavenlyMomentOption, EventChoice, MetaData,
 } from './types';
+import { defaultMeta } from './types';
 
 // ─── 全局状态 ────────────────────────────────────────────────────
 let state!: RunState;
@@ -159,7 +160,8 @@ async function doSkillPick(contextLabel: string): Promise<void> {
       // 协同触发
       for (const syn of newSynergies) {
         CombatLog.appendLog({ type: 'synergy', text: syn.logText, timestamp: 0 });
-        SkillTreeUI.showSynergyToast(syn);
+        const isFirstEver = meta.discoveredSynergies.length === 0;
+        SkillTreeUI.showSynergyToast(syn, isFirstEver);
         if (!meta.discoveredSynergies.includes(syn.id)) {
           meta.discoveredSynergies.push(syn.id);
           saveMeta(meta);
@@ -410,6 +412,58 @@ async function showRunEnd(victory: boolean, blameContext: string, blameDetail: s
   el.classList.add('active');
 }
 
+// ─── 续局流程 ────────────────────────────────────────────────────
+/** 续局：从快照恢复后根据 currentZone 跳转到合适的推进位置 */
+async function resumeFlow(): Promise<void> {
+  CombatLog.clearLogs();
+  updateUI();
+  const z = state.currentZone;
+  const zoneNames = ['北荒边境', '幽冥古道', '苍狼王领地'];
+  CombatLog.appendLog({ type: 'system', text: `═══ 续局恢复 · ${zoneNames[Math.min(2, z)]} ═══`, timestamp: 0 });
+  CombatLog.appendLog({ type: 'system', text: `功法：${state.skillTree.map(n => n.name).join('、') || '尚无'} · 道韵${state.daoYun} · 战${state.combatCount}场`, timestamp: 0 });
+  setAction('续局', `已从「${zoneNames[Math.min(2, z)]}」恢复，功法与装备完整保留。`, []);
+  await waitContinue('继续前行 →');
+
+  if (z <= 0) {
+    // 北荒境内：跳过前段普通怪，从精英战续起
+    CombatLog.appendLog({ type: 'system', text: '（续局：已跳过北荒早期战斗，从精英战恢复）', timestamp: 0 });
+    await doCombat(ZONE1_ENEMIES[3]); if (runAborted) return;
+    await doSkillPick('境界突破');
+    await doZoneFork(); if (runAborted) return;
+    // fall through to Zone 2
+    state = { ...state, currentZone: 1 };
+    CombatLog.appendLog({ type: 'system', text: '═══ 踏入幽冥古道 ═══', timestamp: 0 });
+    await waitContinue('深入古道 →');
+    await doCombat(ZONE2_ENEMIES[0]); if (runAborted) return;
+    await doEvent();
+    await doCombat(ZONE2_ENEMIES[1]); if (runAborted) return;
+    await doSkillPick('境界突破');
+    await doCombat(ZONE2_ENEMIES[2]); if (runAborted) return;
+    await doSkillPick('境界突破');
+    await doCombat(ZONE2_ENEMIES[3]); if (runAborted) return;
+    await doSkillPick('境界突破');
+    if (runAborted) return;
+  } else if (z === 1) {
+    // 幽冥古道：从 Zone 2 开头重推
+    CombatLog.appendLog({ type: 'system', text: '（续局：从幽冥古道重新推进）', timestamp: 0 });
+    state = { ...state, currentZone: 1 };
+    CombatLog.appendLog({ type: 'system', text: '═══ 踏入幽冥古道 ═══', timestamp: 0 });
+    await waitContinue('深入古道 →');
+    await doCombat(ZONE2_ENEMIES[0]); if (runAborted) return;
+    await doEvent();
+    await doCombat(ZONE2_ENEMIES[1]); if (runAborted) return;
+    await doSkillPick('境界突破');
+    await doCombat(ZONE2_ENEMIES[2]); if (runAborted) return;
+    await doSkillPick('境界突破');
+    await doCombat(ZONE2_ENEMIES[3]); if (runAborted) return;
+    await doSkillPick('境界突破');
+    if (runAborted) return;
+  }
+  // z >= 2：已到Boss区，直接进入Boss战
+  await doBoss();
+  if (!runAborted) await showRunEnd(true, '', '');
+}
+
 // ─── Run 主流程 ──────────────────────────────────────────────────
 
 async function runFlow() {
@@ -491,6 +545,54 @@ const Game = {
       () => alert(`存档码：\n${code}`)
     );
   },
+  openSettings:  () => { document.getElementById('settings-modal')!.style.display = 'flex'; },
+  closeSettings: () => { document.getElementById('settings-modal')!.style.display = 'none'; },
+  resumeRun: async () => {
+    const snap = loadRunSnapshot();
+    if (!snap) return;
+    document.getElementById('spirit-select')!.style.display = 'none';
+    document.getElementById('app')!.style.removeProperty('display');
+    runAborted = false;
+    state = snap;
+    meta = loadMeta();
+    await resumeFlow();
+  },
+  importSave: () => {
+    const input = document.getElementById('import-code-input') as HTMLTextAreaElement;
+    const code = input?.value.trim();
+    if (!code) { alert('请先粘贴存档码'); return; }
+    const result = importSaveCode(code);
+    if (result.success) {
+      meta = loadMeta();
+      input.value = '';
+      document.getElementById('settings-modal')!.style.display = 'none';
+      alert('导入成功！请重新选择灵根开局。');
+    } else {
+      alert(`导入失败：${result.error ?? '存档码无效'}`);
+    }
+  },
+  clearSave: () => {
+    if (!confirm('确认删除所有存档数据？此操作不可恢复！')) return;
+    clearAllData();
+    meta = defaultMeta();
+    document.getElementById('settings-modal')!.style.display = 'none';
+    alert('已清档，请重新开局。');
+  },
 };
 
 window.Game = Game;
+
+// ─── 页面加载时检测续局快照 ─────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const snap = loadRunSnapshot();
+  if (!snap) return;
+  const section = document.getElementById('resume-section');
+  const btn     = document.getElementById('btn-resume');
+  const info    = document.getElementById('resume-info');
+  if (section) section.style.removeProperty('display');
+  if (btn) {
+    const zoneNames = ['北荒边境', '幽冥古道', '苍狼王领地'];
+    btn.textContent = `继续上局（${zoneNames[Math.min(2, snap.currentZone)]} · 战${snap.combatCount}场 · 道韵${snap.daoYun}）`;
+  }
+  if (info) info.textContent = `功法：${snap.skillTree.map((n: any) => n.name).join('、') || '尚无'}`;
+});

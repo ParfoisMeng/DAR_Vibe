@@ -45,12 +45,16 @@ export function renderSynergies(synergies: Synergy[]): void {
   `).join('');
 }
 
-/** 弹出协同发现 Toast（3 秒自动消失） */
-export function showSynergyToast(synergy: Synergy): void {
+/** 弹出协同发现 Toast
+ * @param isFirstEver 是否为本账号第一次发现任意协同（显示特殊首次提示）
+ */
+export function showSynergyToast(synergy: Synergy, isFirstEver = false): void {
   const el = document.getElementById('synergy-toast')!;
-  el.textContent = `天机感应：${synergy.name} — ${synergy.logText}`;
+  el.textContent = isFirstEver
+    ? `✨ 天机初感应！你发现了第一个协同效果——${synergy.name}：${synergy.logText}`
+    : `天机感应：${synergy.name} — ${synergy.logText}`;
   el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 3000);
+  setTimeout(() => el.classList.remove('show'), isFirstEver ? 5000 : 3000);
 }
 
 /** 渲染天机图鉴（显示所有协同槽位，未发现的显示「???」） */
