@@ -3,8 +3,8 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { calcCombat } from '../engine/combat';
-import { defaultStats } from '../types';
+import { calcCombat } from '../../src/engine/combat';
+import { defaultStats } from '../../src/types';
 import type { Enemy, Stats } from '../types';
 
 // ── 测试用敌人 ────────────────────────────────────────────────

@@ -3,8 +3,8 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { createNewRun, pickSkillNode, equipItem } from '../engine/run';
-import type { SkillNode, Equipment } from '../types';
+import { createNewRun, pickSkillNode, equipItem } from '../../src/engine/run';
+import type { SkillNode, Equipment } from '../../src/types';
 
 // ── 测试用功法节点 ────────────────────────────────────────────
 

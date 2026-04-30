@@ -4,8 +4,8 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadMeta, saveMeta, loadRunSnapshot, saveRunSnapshot,
-         clearRunSnapshot, exportSaveCode, importSaveCode, clearAllData } from '../save';
-import { defaultMeta } from '../types';
+         clearRunSnapshot, exportSaveCode, importSaveCode, clearAllData } from '../../src/save';
+import { defaultMeta } from '../../src/types';
 
 // ── jsdom 内置 localStorage，直接使用
 // 每个测试前清空 localStorage ─────────────────────────────────
