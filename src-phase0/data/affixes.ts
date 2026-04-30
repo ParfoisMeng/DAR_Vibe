@@ -3,7 +3,7 @@
 //  Phase 0：3槽，15个词缀（5基础 + 7触发 + 3协同）
 // ============================================================
 
-import type { Affix, Equipment, EquipSlot, ItemQuality } from '@/types';
+import type { Affix, Equipment, EquipSlot, ItemQuality } from '../types';
 
 // ── 词缀定义 ──────────────────────────────────────────────
 

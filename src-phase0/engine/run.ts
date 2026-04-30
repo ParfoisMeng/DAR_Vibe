@@ -5,10 +5,10 @@
 import type {
   RunState, Stats, SkillNode, Synergy, Equipment,
   EquipSlot, SpiritRoot,
-} from '@/types';
-import { defaultStats } from '@/types';
-import { detectSynergies, collectSkillTags, findNewSynergies } from '@/data/synergies';
-import { collectAffixTags } from '@/data/affixes';
+} from '../types';
+import { defaultStats } from '../types';
+import { detectSynergies, collectSkillTags, findNewSynergies } from '../data/synergies';
+import { collectAffixTags } from '../data/affixes';
 
 // ── RunState 初始化 ──────────────────────────────────────────
 

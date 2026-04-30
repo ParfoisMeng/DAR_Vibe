@@ -3,7 +3,7 @@
 //  苍狼王 Boss 战：开场 + 75% + 25%
 // ============================================================
 
-import type { HeavenlyMoment } from '@/types';
+import type { HeavenlyMoment } from '../types';
 
 export const BOSS_HEAVENLY_MOMENTS: HeavenlyMoment[] = [
 

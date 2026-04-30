@@ -4,7 +4,7 @@
 //  ⚠️ 所有 logText 必须通过仙侠叙事语言规范（禁止机制描述词汇）
 // ============================================================
 
-import type { Synergy } from '@/types';
+import type { Synergy } from '../types';
 
 export const SYNERGIES_PHASE0: Synergy[] = [
 

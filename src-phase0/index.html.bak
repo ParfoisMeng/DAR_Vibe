@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>问道无界 · Phase 0</title>
+  <style>
+    /* ─── 全局变量 ──────────────────────────── */
+    :root {
+      --bg: #0d1117;
+      --bg2: #161b22;
+      --bg3: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text2: #8b949e;
+      --gold: #d4a017;
+      --gold2: #f0c040;
+      --red: #c0392b;
+      --blue: #1f6feb;
+      --green: #238636;
+      --purple: #8957e5;
+      --orange: #e67e22;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Serif SC', 'Source Han Serif', Georgia, serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* ─── 布局 ──────────────────────────────── */
+    #app { display: flex; height: 100vh; gap: 0; }
+
+    /* 左侧：状态面板 */
+    #panel-left {
+      width: 220px;
+      min-width: 220px;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    /* 中间：主游戏区 */
+    #panel-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* 右侧：功法树/图鉴 */
+    #panel-right {
+      width: 220px;
+      min-width: 220px;
+      background: var(--bg2);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    /* ─── 通用组件 ───────────────────────────── */
+    .panel-title {
+      padding: 10px 12px 8px;
+      font-size: 11px;
+      color: var(--gold);
+      letter-spacing: 2px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .section { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    .label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+
+    /* ─── 属性栏 ─────────────────────────────── */
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+    .stat-label { color: var(--text2); }
+    .stat-value { color: var(--text); font-weight: bold; }
+    .stat-value.gold { color: var(--gold); }
+    .stat-value.special { color: var(--purple); }
+
+    /* HP/护盾条 */
+    .bar-wrap { margin-bottom: 8px; }
+    .bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+    .bar-bg { height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+    .bar-hp .bar-fill { background: linear-gradient(90deg, #27ae60, #2ecc71); }
+    .bar-shield .bar-fill { background: linear-gradient(90deg, #1565c0, #42a5f5); }
+    .bar-si .bar-fill { background: linear-gradient(90deg, #7b1fa2, #ba68c8); }
+
+    /* ─── 战斗日志 ───────────────────────────── */
+    #combat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #combat-log-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .log-entry {
+      font-size: 13px;
+      line-height: 1.6;
+      padding: 1px 0;
+      animation: fadeIn 0.15s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; } }
+    .log-system { color: var(--text2); font-size: 12px; border-top: 1px solid var(--border); padding-top: 6px; margin-top: 4px; }
+    .log-crit { color: var(--gold2); font-weight: bold; }
+    .log-synergy { color: var(--purple); font-size: 14px; font-weight: bold; margin: 4px 0; }
+    .log-boss { color: var(--orange); }
+    .log-loot { color: var(--green); }
+    .log-normal { color: var(--text); }
+
+    /* ─── 行动区 ─────────────────────────────── */
+    #action-area {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      min-height: 120px;
+    }
+    .action-title {
+      font-size: 12px;
+      color: var(--gold);
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .action-narrative {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.7;
+      margin-bottom: 10px;
+      white-space: pre-line;
+    }
+    .choices { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--text);
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.15s;
+      line-height: 1.4;
+      text-align: left;
+    }
+    .btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn.primary { border-color: var(--gold); color: var(--gold); background: rgba(212,160,23,0.08); }
+    .btn.primary:hover:not(:disabled) { background: rgba(212,160,23,0.18); }
+    .btn.danger { border-color: var(--red); color: var(--red); }
+    .btn.locked {
+      opacity: 0.5;
+      border-style: dashed;
+      color: var(--text2);
+    }
+    .btn .cond-label { font-size: 11px; color: var(--text2); display: block; }
+    .btn .cond-ok { color: var(--green); }
+    .btn .spirit-exclusive { font-size: 10px; color: var(--purple); }
+
+    /* ─── 天机时刻弹层 ──────────────────────── */
+    #hm-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.82);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    #hm-overlay.active { display: flex; }
+    #hm-box {
+      width: 520px;
+      max-width: 95vw;
+      background: var(--bg2);
+      border: 2px solid var(--gold);
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 0 40px rgba(212,160,23,0.3);
+    }
+    .hm-title {
+      font-size: 16px;
+      color: var(--gold2);
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .hm-narrative {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.8;
+      margin-bottom: 16px;
+      border-left: 2px solid var(--gold);
+      padding-left: 12px;
+      white-space: pre-line;
+    }
+    .hm-options { display: flex; flex-direction: column; gap: 8px; }
+    .hm-opt {
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      padding: 10px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .hm-opt:hover:not(.hm-opt-locked) { border-color: var(--gold); }
+    .hm-opt-locked { opacity: 0.45; cursor: not-allowed; }
+    .hm-opt-label { font-size: 13px; color: var(--text); margin-bottom: 4px; }
+    .hm-opt-desc { font-size: 12px; color: var(--text2); }
+    .hm-opt-cond { font-size: 11px; color: var(--text2); margin-top: 4px; }
+    .hm-opt-cond.met { color: var(--green); }
+    .hm-opt-cond.unmet { color: var(--red); }
+
+    /* ─── 协同触发弹窗 ──────────────────────── */
+    #synergy-toast {
+      position: fixed;
+      top: 20px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(137,87,229,0.95);
+      border: 1px solid var(--purple);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 200;
+      max-width: 480px;
+      text-align: center;
+      pointer-events: none;
+    }
+    #synergy-toast.show { opacity: 1; }
+
+    /* ─── 功法树节点 ────────────────────────── */
+    .skill-node {
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    .skill-node .sk-name { color: var(--gold); font-size: 12px; }
+    .skill-node .sk-type { color: var(--text2); font-size: 10px; }
+    .skill-node .sk-syn { color: var(--purple); font-size: 10px; }
+
+    /* ─── 装备格 ─────────────────────────────── */
+    .equip-slot {
+      display: flex;
+      gap: 6px;
+      align-items: flex-start;
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+    .equip-slot-label {
+      width: 32px;
+      color: var(--text2);
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+    .equip-item {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 4px 6px;
+    }
+    .equip-item.spirit { border-color: #4a9eff; }
+    .equip-item.rare { border-color: #c4a0ff; }
+    .equip-item.supreme { border-color: var(--gold); }
+    .equip-item.immortal { border-color: var(--orange); }
+    .equip-name { color: var(--text); }
+    .equip-affix { color: var(--text2); font-size: 10px; margin-top: 2px; }
+    .equip-empty { color: var(--bg3); font-style: italic; }
+
+    /* ─── 协同列表 ──────────────────────────── */
+    .synergy-item {
+      padding: 5px 8px;
+      margin-bottom: 4px;
+      border-left: 3px solid var(--purple);
+      background: rgba(137,87,229,0.08);
+      font-size: 11px;
+    }
+    .synergy-item.rare { border-color: var(--orange); background: rgba(230,126,34,0.08); }
+    .synergy-item.epic { border-color: var(--gold); background: rgba(212,160,23,0.15); }
+
+    /* ─── 装备决策面板 ──────────────────────── */
+    #loot-panel {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 90;
+    }
+    #loot-panel.active { display: flex; }
+    #loot-box {
+      width: 400px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .loot-quality {
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .loot-quality.spirit { color: #4a9eff; }
+    .loot-quality.rare { color: #c4a0ff; }
+    .loot-quality.supreme { color: var(--gold); }
+    .loot-quality.immortal { color: var(--orange); }
+    .loot-affix { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+    .loot-compare { font-size: 11px; color: var(--text2); margin: 10px 0; padding-top: 8px; border-top: 1px solid var(--border); }
+    .loot-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+    /* ─── 选择灵根 ──────────────────────────── */
+    #spirit-select {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 150;
+    }
+    .spirit-title {
+      font-size: 24px;
+      color: var(--gold);
+      letter-spacing: 4px;
+      margin-bottom: 8px;
+    }
+    .spirit-sub {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 32px;
+    }
+    .spirit-cards {
+      display: flex;
+      gap: 16px;
+    }
+    .spirit-card {
+      width: 160px;
+      border: 2px solid var(--border);
+      background: var(--bg2);
+      padding: 20px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .spirit-card:hover { border-color: var(--gold); box-shadow: 0 0 20px rgba(212,160,23,0.2); }
+    .spirit-card .sc-name { font-size: 18px; color: var(--gold); margin-bottom: 8px; }
+    .spirit-card .sc-desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+    /* ─── Run 结算界面 ──────────────────────── */
+    #run-end {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    #run-end.active { display: flex; }
+    #run-end-box {
+      width: 560px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 28px;
+    }
+    .re-title { font-size: 18px; color: var(--gold); margin-bottom: 16px; text-align: center; }
+    .re-quote { font-size: 14px; color: var(--text2); font-style: italic; margin-bottom: 16px; text-align: center; }
+    .re-section { margin-bottom: 14px; }
+    .re-label { font-size: 11px; color: var(--text2); margin-bottom: 6px; }
+    .re-content { font-size: 13px; line-height: 1.8; }
+    .re-blame { background: rgba(212,160,23,0.08); border: 1px dashed var(--gold); padding: 10px; border-radius: 4px; font-size: 12px; color: var(--gold2); margin-bottom: 14px; }
+    .re-actions { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+
+    /* ─── 节点选择 ──────────────────────────── */
+    #skill-pick {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 95;
+    }
+    #skill-pick.active { display: flex; }
+    #skill-pick-box {
+      width: 640px;
+      max-width: 95vw;
+      background: var(--bg2);
+      border: 2px solid var(--gold);
+      border-radius: 8px;
+      padding: 24px;
+    }
+    .sp-title { font-size: 15px; color: var(--gold); letter-spacing: 2px; margin-bottom: 6px; }
+    .sp-tree { font-size: 11px; color: var(--text2); margin-bottom: 16px; }
+    .sp-cards { display: flex; gap: 12px; }
+    .sp-card {
+      flex: 1;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      padding: 14px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .sp-card:hover { border-color: var(--gold); }
+    .sp-card .sp-name { font-size: 14px; color: var(--gold); margin-bottom: 4px; }
+    .sp-card .sp-type { font-size: 10px; color: var(--text2); margin-bottom: 6px; }
+    .sp-card .sp-desc { font-size: 12px; color: var(--text); line-height: 1.5; margin-bottom: 6px; }
+    .sp-card .sp-flavor { font-size: 11px; color: var(--text2); font-style: italic; }
+    .sp-card .sp-syn { font-size: 11px; color: var(--purple); margin-top: 4px; }
+
+    /* ─── 事件面板 ──────────────────────────── */
+    #event-panel {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 95;
+    }
+    #event-panel.active { display: flex; }
+    #event-box {
+      width: 480px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+    }
+    .ev-title { font-size: 15px; color: var(--text); margin-bottom: 10px; }
+    .ev-desc { font-size: 13px; color: var(--text2); line-height: 1.8; margin-bottom: 16px; white-space: pre-line; }
+    .ev-choices { display: flex; flex-direction: column; gap: 8px; }
+    .ev-choice {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .ev-choice:hover { border-color: var(--gold); }
+    .ev-choice .ec-label { font-size: 13px; color: var(--text); margin-bottom: 2px; }
+    .ev-choice .ec-desc { font-size: 11px; color: var(--text2); }
+
+    /* ─── 移动端 Tab 导航 ────────────────────── */
+    #mobile-tabs {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      z-index: 50;
+      height: 52px;
+    }
+    .mobile-tab-bar {
+      display: flex;
+      height: 100%;
+    }
+    .mobile-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-size: 10px;
+      color: var(--text2);
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: inherit;
+      transition: color 0.15s;
+      padding: 0;
+      min-height: 44px;
+    }
+    .mobile-tab.active { color: var(--gold); }
+    .mobile-tab .tab-icon { font-size: 18px; }
+
+    /* ─── 响应式断点 ─────────────────────────── */
+    @media (max-width: 767px) {
+      body { font-size: 13px; }
+
+      /* 主布局改为单列 */
+      #app {
+        flex-direction: column;
+        height: calc(100vh - 52px); /* 留出底部 Tab 空间 */
+        overflow: hidden;
+      }
+
+      /* 侧边栏默认隐藏，通过 .mobile-visible 切换 */
+      #panel-left, #panel-right {
+        display: none;
+        width: 100%;
+        min-width: unset;
+        border: none;
+        border-bottom: 1px solid var(--border);
+        max-height: calc(100vh - 52px);
+        overflow-y: auto;
+        flex-shrink: 0;
+      }
+      #panel-left.mobile-visible,
+      #panel-right.mobile-visible {
+        display: flex;
+      }
+      #panel-main {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
+      /* 主区隐藏时 */
+      #panel-main.mobile-hidden { display: none; }
+
+      /* 行动区固定在页面底部，给日志留出空间 */
+      #action-area {
+        border-top: 1px solid var(--border);
+        padding: 10px 12px;
+        min-height: 90px;
+        max-height: 45vh;
+        overflow-y: auto;
+      }
+      #combat-log-container {
+        padding: 8px 12px;
+      }
+
+      /* 按钮触控最小高度 */
+      .btn { min-height: 44px; padding: 8px 14px; font-size: 13px; }
+
+      /* 选灵根垂直排列 */
+      .spirit-cards { flex-direction: column; width: 100%; max-width: 360px; gap: 12px; }
+      .spirit-card { width: 100%; }
+
+      /* 弹层宽度适配 */
+      #hm-box, #skill-pick-box, #event-box, #loot-box { width: 95vw; padding: 16px; }
+
+      /* 择法卡片改为垂直堆叠 */
+      .sp-cards { flex-direction: column; }
+      .sp-card { min-width: unset; }
+
+      /* 天机时刻弹层可滚动 */
+      #hm-box { max-height: 90vh; overflow-y: auto; }
+
+      /* 显示底部 Tab */
+      #mobile-tabs { display: block; }
+
+      /* 结算弹层 */
+      #run-end-box { width: 95vw; padding: 18px; }
+    }
+
+    /* 超小屏（360px以下） */
+    @media (max-width: 360px) {
+      .sp-card .sp-name { font-size: 13px; }
+      .hm-opt-label { font-size: 12px; }
+      .btn { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 灵根选择 -->
+<div id="spirit-select">
+  <div class="spirit-title">问道无界</div>
+  <div class="spirit-sub">选择你的灵根，踏上历劫之路</div>
+  <div class="spirit-cards">
+    <div class="spirit-card" onclick="Game.selectSpiritRoot('sword')">
+      <div class="sc-name">纯阳剑灵根</div>
+      <div class="sc-desc">
+        以剑为道，意随心动。<br/>
+        攻击力+10%，暴击率+5%。<br/>
+        剑意积累，一击制胜。
+      </div>
+    </div>
+  </div>
+  <!-- 续局选项（有快照时由 JS 显示） -->
+  <div id="resume-section" style="display:none;margin-top:24px;text-align:center;border-top:1px solid var(--border);padding-top:20px;width:100%;max-width:520px">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">— 或继续上次进度 —</div>
+    <button class="btn primary" id="btn-resume" onclick="Game.resumeRun()" style="padding:10px 24px;font-size:13px;min-width:220px">继续上局</button>
+    <div id="resume-info" style="font-size:11px;color:var(--text2);margin-top:6px"></div>
+  </div>
+  <div style="margin-top:16px;font-size:12px;color:var(--text2)">
+    <span style="cursor:pointer;text-decoration:underline" onclick="Game.openSettings()">⚙ 存档管理</span>
+  </div>
+</div>
+
+<!-- 主游戏界面 -->
+<div id="app" style="display:none">
+  <!-- 左侧状态 -->
+  <div id="panel-left">
+    <div class="panel-title">修炼状态</div>
+
+    <div class="section">
+      <div class="label">根基 / 护体真气</div>
+      <div class="bar-wrap bar-hp">
+        <div class="bar-label"><span>根基</span><span id="stat-hp">500/500</span></div>
+        <div class="bar-bg"><div class="bar-fill" id="bar-hp" style="width:100%"></div></div>
+      </div>
+      <div class="bar-wrap bar-shield">
+        <div class="bar-label"><span>护盾</span><span id="stat-shield">0</span></div>
+        <div class="bar-bg"><div class="bar-fill" id="bar-shield" style="width:0%"></div></div>
+      </div>
+      <div class="bar-wrap bar-si">
+        <div class="bar-label"><span>剑意</span><span id="stat-si">0/100</span></div>
+        <div class="bar-bg"><div class="bar-fill" id="bar-si" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="stat-row"><span class="stat-label">剑气（攻击）</span><span class="stat-value" id="stat-atk">500</span></div>
+      <div class="stat-row"><span class="stat-label">攻速</span><span class="stat-value" id="stat-speed">1.2/s</span></div>
+      <div class="stat-row"><span class="stat-label">会心率</span><span class="stat-value" id="stat-crit">10%</span></div>
+      <div class="stat-row"><span class="stat-label">减伤</span><span class="stat-value" id="stat-reduce">0%</span></div>
+      <div class="stat-row"><span class="stat-label">掉落幸运</span><span class="stat-value gold" id="stat-luck">0%</span></div>
+    </div>
+
+    <div class="section">
+      <div class="label">法宝</div>
+      <div id="equip-panel">
+        <div class="equip-slot"><span class="equip-slot-label">飞剑</span><div class="equip-item equip-empty" id="eq-weapon">— 空 —</div></div>
+        <div class="equip-slot"><span class="equip-slot-label">法袍</span><div class="equip-item equip-empty" id="eq-armor">— 空 —</div></div>
+        <div class="equip-slot"><span class="equip-slot-label">玉戒</span><div class="equip-item equip-empty" id="eq-ring">— 空 —</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="label">当前道途</div>
+      <div class="stat-row"><span class="stat-label">区域</span><span class="stat-value" id="stat-zone">—</span></div>
+      <div class="stat-row"><span class="stat-label">战斗场次</span><span class="stat-value" id="stat-combats">0</span></div>
+      <div class="stat-row"><span class="stat-label">道韵（本局）</span><span class="stat-value gold" id="stat-daoyun">0</span></div>
+    </div>
+  </div>
+
+  <!-- 中央主区 -->
+  <div id="panel-main">
+    <div id="combat-area">
+      <div id="combat-log-container"></div>
+    </div>
+    <div id="action-area">
+      <div class="action-title" id="action-title">—</div>
+      <div class="action-narrative" id="action-narrative"></div>
+      <div class="choices" id="action-choices"></div>
+    </div>
+  </div>
+
+  <!-- 右侧功法树 -->
+  <div id="panel-right">
+    <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>功法树</span>
+      <button style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px" onclick="Game.openSettings()" title="存档管理">⚙</button>
+    </div>
+    <div class="section">
+      <div class="label">已修炼功法</div>
+      <div id="skill-tree-display"></div>
+    </div>
+    <div class="section">
+      <div class="label">天机感应</div>
+      <div id="synergy-display"></div>
+    </div>
+    <div class="section">
+      <div class="label">天机图鉴 <span style="color:var(--text2);font-size:10px">(已发现)</span></div>
+      <div id="journal-display"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 天机时刻弹层 -->
+<div id="hm-overlay">
+  <div id="hm-box">
+    <div class="hm-title" id="hm-title">⚡ 天机时刻</div>
+    <div class="hm-narrative" id="hm-narrative"></div>
+    <div class="hm-options" id="hm-options"></div>
+  </div>
+</div>
+
+<!-- 节点选择弹层 -->
+<div id="skill-pick">
+  <div id="skill-pick-box">
+    <div class="sp-title">境界突破 · 择法</div>
+    <div class="sp-tree" id="sp-tree-summary"></div>
+    <div class="sp-cards" id="sp-cards"></div>
+  </div>
+</div>
+
+<!-- 事件弹层 -->
+<div id="event-panel">
+  <div id="event-box">
+    <div class="ev-title" id="ev-title"></div>
+    <div class="ev-desc" id="ev-desc"></div>
+    <div class="ev-choices" id="ev-choices"></div>
+  </div>
+</div>
+
+<!-- 掉落决策弹层 -->
+<div id="loot-panel">
+  <div id="loot-box">
+    <div class="loot-quality" id="loot-quality"></div>
+    <div id="loot-name" style="font-size:14px;margin-bottom:8px;color:var(--text)"></div>
+    <div id="loot-affixes"></div>
+    <div class="loot-compare" id="loot-compare"></div>
+    <div class="loot-actions">
+      <button class="btn primary" onclick="Game.equipLoot()">装备</button>
+      <button class="btn" onclick="Game.storeLoot()">存仓库</button>
+      <button class="btn danger" onclick="Game.discardLoot()">分解→材料</button>
+    </div>
+  </div>
+</div>
+
+<!-- 设置 Modal（存档管理）-->
+<div id="settings-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:300">
+  <div style="width:400px;max-width:95vw;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:24px">
+    <div style="font-size:15px;color:var(--gold);margin-bottom:16px;letter-spacing:1px">⚙ 存档管理</div>
+    <div style="margin-bottom:12px;padding:10px;background:var(--bg3);border-radius:4px">
+      <div class="label" style="margin-bottom:6px">导出存档码</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">将全部数据导出为文本码，可在其他设备导入恢复。</div>
+      <button class="btn primary" onclick="Game.exportSave()" style="width:100%">复制存档码到剪贴板</button>
+    </div>
+    <div style="margin-bottom:12px;padding:10px;background:var(--bg3);border-radius:4px">
+      <div class="label" style="margin-bottom:6px">导入存档码</div>
+      <textarea id="import-code-input" placeholder="粘贴存档码..." style="width:100%;height:72px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:4px;font-size:11px;resize:vertical;font-family:monospace;margin-top:4px"></textarea>
+      <button class="btn" onclick="Game.importSave()" style="width:100%;margin-top:6px">导入并覆盖当前存档</button>
+    </div>
+    <div style="margin-bottom:16px;padding:10px;background:rgba(192,57,43,0.08);border:1px dashed var(--red);border-radius:4px">
+      <div class="label" style="color:var(--red);margin-bottom:6px">危险操作</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">删除所有本地存档，含传承数据。不可恢复。</div>
+      <button class="btn danger" onclick="Game.clearSave()" style="width:100%">清空所有存档</button>
+    </div>
+    <button class="btn" onclick="Game.closeSettings()" style="width:100%">关闭</button>
+  </div>
+</div>
+
+<!-- 协同触发提示 -->
+<div id="synergy-toast"></div>
+
+<!-- 移动端底部 Tab 导航 -->
+<div id="mobile-tabs">
+  <div class="mobile-tab-bar">
+    <button class="mobile-tab active" id="tab-log" onclick="switchTab('log')">
+      <span class="tab-icon">⚔</span>
+      <span>战斗日志</span>
+    </button>
+    <button class="mobile-tab" id="tab-stats" onclick="switchTab('stats')">
+      <span class="tab-icon">📊</span>
+      <span>修炼状态</span>
+    </button>
+    <button class="mobile-tab" id="tab-skills" onclick="switchTab('skills')">
+      <span class="tab-icon">📖</span>
+      <span>功法图鉴</span>
+    </button>
+  </div>
+</div>
+
+<!-- Run 结算界面 -->
+<div id="run-end">
+  <div id="run-end-box">
+    <div class="re-title" id="re-title">历劫封印</div>
+    <div class="re-quote" id="re-quote"></div>
+    <div class="re-blame" id="re-blame"></div>
+    <div class="re-section">
+      <div class="re-label">道途轨迹</div>
+      <div class="re-content" id="re-build"></div>
+    </div>
+    <div class="re-section">
+      <div class="re-label">天机感应记录</div>
+      <div class="re-content" id="re-synergies"></div>
+    </div>
+    <div class="re-actions">
+      <button class="btn primary" onclick="Game.restartRun()">弘光再起</button>
+      <button class="btn" onclick="Game.exportSave()">导出存档码</button>
+    </div>
+  </div>
+</div>
+
+<script src="dist/bundle.js"></script>
+<script>
+  // 移动端 Tab 切换逻辑
+  function switchTab(tab) {
+    const isMobile = window.innerWidth < 768;
+    if (!isMobile) return;
+
+    // 重置所有面板
+    document.getElementById('panel-left').classList.remove('mobile-visible');
+    document.getElementById('panel-right').classList.remove('mobile-visible');
+    document.getElementById('panel-main').classList.remove('mobile-hidden');
+
+    // 激活对应 tab
+    document.querySelectorAll('.mobile-tab').forEach(t => t.classList.remove('active'));
+
+    if (tab === 'log') {
+      document.getElementById('tab-log').classList.add('active');
+    } else if (tab === 'stats') {
+      document.getElementById('tab-stats').classList.add('active');
+      document.getElementById('panel-left').classList.add('mobile-visible');
+      document.getElementById('panel-main').classList.add('mobile-hidden');
+    } else if (tab === 'skills') {
+      document.getElementById('tab-skills').classList.add('active');
+      document.getElementById('panel-right').classList.add('mobile-visible');
+      document.getElementById('panel-main').classList.add('mobile-hidden');
+    }
+  }
+
+  // 窗口 resize 时重置布局
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 768) {
+      document.getElementById('panel-left').classList.remove('mobile-visible');
+      document.getElementById('panel-right').classList.remove('mobile-visible');
+      document.getElementById('panel-main').classList.remove('mobile-hidden');
+    }
+  });
+</script>
+</html>

@@ -1,11 +1,12 @@
 {
-  "name": "dar-vibe-phase0",
-  "version": "0.0.1",
-  "description": "问道无界 Phase 0 原型",
+  "name": "dar-vibe",
+  "version": "1.0.0",
+  "description": "问道无界 - 修仙Roguelike文字冒险",
+  "type": "module",
   "scripts": {
-    "dev": "npx esbuild src/main.ts --bundle --outfile=dist/bundle.js --watch --sourcemap",
-    "build": "npx esbuild src/main.ts --bundle --outfile=dist/bundle.js --minify",
-    "serve": "npx http-server . -p 3000 -o",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
@@ -16,13 +17,23 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
+    "@tailwindcss/vite": "^4.2.4",
     "@types/node": "^25.6.0",
+    "@vitejs/plugin-vue": "^6.0.6",
     "@vitest/coverage-v8": "^4.1.5",
     "@vitest/ui": "^4.1.5",
     "esbuild": "^0.25.0",
     "jsdom": "^29.1.0",
     "playwright": "^1.59.1",
+    "tailwindcss": "^4.2.4",
     "typescript": "^6.0.3",
+    "vite": "^7.3.2",
+    "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.1.5"
+  },
+  "dependencies": {
+    "pinia": "^3.0.4",
+    "vue": "^3.5.33",
+    "vue-router": "^5.0.6"
   }
 }

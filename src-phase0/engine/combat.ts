@@ -3,7 +3,7 @@
 //  calcCombat(player, enemy) → CombatResult
 // ============================================================
 
-import type { Stats, Enemy, CombatResult, CombatLogEntry, LogType } from '@/types';
+import type { Stats, Enemy, CombatResult, CombatLogEntry, LogType } from '../types';
 
 // ── 仙侠动词日志模板 ──────────────────────────────────────
 // 严禁机制描述词汇，只允许仙侠动词意象

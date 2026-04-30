@@ -3,7 +3,7 @@
 //  2个区域 + 1个Boss，共12种敌人
 // ============================================================
 
-import type { Enemy, BossPhase } from '@/types';
+import type { Enemy, BossPhase } from '../types';
 
 // ── 第一区域：北荒边境 ───────────────────────────────────
 

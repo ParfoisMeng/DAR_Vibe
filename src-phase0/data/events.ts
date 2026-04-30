@@ -3,7 +3,7 @@
 //  Phase 0：5个事件（保证第一个事件是 tier:'good' 或 'medium'）
 // ============================================================
 
-import type { GameEvent } from '@/types';
+import type { GameEvent } from '../types';
 
 export const EVENTS_PHASE0: GameEvent[] = [
 

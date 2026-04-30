@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+/* ===== 仙侠主题变量 ===== */
+:root {
+  --c-bg: #0f0f23;
+  --c-bg-panel: #1a1a2e;
+  --c-bg-card: #16213e;
+  --c-border: #2a2a4a;
+  --c-text: #e0d8c8;
+  --c-text-dim: #8b8574;
+  --c-accent: #c8a96e;
+  --c-accent-light: #e6d5a8;
+  --c-hp: #e74c3c;
+  --c-shield: #3498db;
+  --c-si: #f1c40f;
+  --c-crit: #ff6b35;
+  --c-synergy: #a855f7;
+  --c-boss: #ef4444;
+  --c-loot: #22c55e;
+  /* 品质颜色 */
+  --c-mortal: #9ca3af;
+  --c-spirit: #22c55e;
+  --c-rare: #3b82f6;
+  --c-supreme: #a855f7;
+  --c-immortal: #f59e0b;
+  /* 协同品级 */
+  --c-tier-commonA: #22c55e;
+  --c-tier-commonB: #3b82f6;
+  --c-tier-rare: #a855f7;
+  --c-tier-epic: #f59e0b;
+}
+
+/* ===== 全局基础 ===== */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: 'LXGW WenKai', 'Noto Serif SC', serif;
+}
+
+#app {
+  height: 100%;
+}
+
+/* ===== 滚动条 ===== */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--c-border);
+  border-radius: 2px;
+}
+
+/* ===== 按钮 ===== */
+.btn {
+  padding: 8px 20px;
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  background: var(--c-bg-card);
+  color: var(--c-text);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--c-accent);
+  background: #1e2d4a;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn.primary {
+  background: linear-gradient(135deg, #2a1a0e, #3d2b1f);
+  border-color: var(--c-accent);
+  color: var(--c-accent-light);
+}
+.btn.primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #3d2b1f, #4a3525);
+}
+.btn.danger {
+  border-color: var(--c-hp);
+  color: var(--c-hp);
+}
+.btn.danger:hover:not(:disabled) {
+  background: rgba(231, 76, 60, 0.15);
+}
+
+/* ===== 动画 ===== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+/* ===== 战斗日志类型 ===== */
+.log-normal { color: var(--c-text-dim); }
+.log-crit   { color: var(--c-crit); font-weight: bold; }
+.log-synergy { color: var(--c-synergy); font-weight: bold; }
+.log-boss   { color: var(--c-boss); }
+.log-system { color: var(--c-accent); font-style: italic; }
+.log-loot   { color: var(--c-loot); }
+
+/* ===== 品质文字 ===== */
+.quality-mortal   { color: var(--c-mortal); }
+.quality-spirit   { color: var(--c-spirit); }
+.quality-rare     { color: var(--c-rare); }
+.quality-supreme  { color: var(--c-supreme); }
+.quality-immortal { color: var(--c-immortal); }
